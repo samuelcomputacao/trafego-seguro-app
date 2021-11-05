@@ -4,6 +4,7 @@ import {
   View,Dimensions
 } from 'react-native';
 import MapView from 'react-native-maps';
+import * as Speech from "expo-speech"; 
 
 import config from '../../../config/index.json';
 
@@ -14,76 +15,73 @@ const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 const SPACE = 0.01;
 const DEFAULT_PADDING = { top: 100, right: 100, bottom: 100, left: 100 };
 const { width, height } = Dimensions.get('window');
+const polylineDecorder = require('polyline');
 
-const Mapa2 = () => {
+
+const Mapa2 = ({ route, navigation }) => {
 
     const mapRef = useRef(null);
 
     const LAT_DELTA = 0.009;
     const LNG_DELTA = 0.002;
-
+  
     const [markers, setMarkers] = useState(null);
-    const [origin, setOrigin]  = useState('22.9962,72.5996');
-    const [destination, setDestination] = useState('23.0134,72.5624');
     const [destMarker, setDestMarker] = useState(null);
     const [startMarker, setStartMarker] = useState(null);
-    const [imageloaded, setImageloaded] = useState(false);
     const [coords, setCoords] = useState(null);
-    const [loading, setLoading] = useState(false);
 
+    const { origin, destination, destinoStr } = route.params;
 
-    const decode = (t, e) => {
-        for (var n, o, u = 0, l = 0, r = 0, d = [], h = 0, i = 0, a = null, c = Math.pow(10, e || 5); u < t.length;) {
-          a = null, h = 0, i = 0;
-          do a = t.charCodeAt(u++) - 63, i |= (31 & a) << h, h += 5; while (a >= 32);
-          n = 1 & i ? ~(i >> 1) : i >> 1, h = i = 0;
-          do a = t.charCodeAt(u++) - 63, i |= (31 & a) << h, h += 5; while (a >= 32);
-          o = 1 & i ? ~(i >> 1) : i >> 1, l += n, r += o, d.push([l / c, r / c])
-        }
-        return d = d.map(function (t) {
-          return {
-            latitude: t[0],
-            longitude: t[1]
-          }
-        })
+    const gerarLinha = (polyline) => {
+      debugger;
+      const coordenadas = polylineDecorder.decode(polyline);
+      let i = 0;
+      const pontos = Array();
+      while(i < coordenadas.length){
+        pontos.push({
+          latitude: coordenadas[i][0],
+          longitude:coordenadas[i][1]
+        });
+        i += 1;
       }
+      return pontos;
+    }
+
+    const speak = (destinostr) => {
+      Speech.speak(destinoStr,{language: 'pt-BR'})
+    }
 
     const getRoutePoints = (origin,destination) => {
         console.log("-----getRoutePoints-----")    
         const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${config.googleAPI}&mode=${mode}`;
-        console.log("URL -- >>" + url);
     
         fetch(url)
           .then(response => response.json())
           .then(responseJson => {
             if (responseJson.routes.length) {
-              var cortemp = decode(responseJson.routes[0].overview_polyline.points) // definition below;
+              
+              var cortemp = gerarLinha(responseJson.routes[0].overview_polyline.points); // definition below;
               var length = cortemp.length - 1;
     
               var tempMARKERS = []; 
               tempMARKERS.push(cortemp[0]) ;   //start origin        
               tempMARKERS.push(cortemp[length]); //only destination adding
     
+              //temMark : [{"latitude":[22.9962,72.59957],"longitude":[22.99633,72.59959]},{"latitude":[23.0138,72.56277],"longitude":[23.01369,72.56232]}]
               console.log("tempMARKERS : " + JSON.stringify(tempMARKERS));
     
-            setCoords(cortemp);
-            setMarkers(tempMARKERS);
-            setDestMarker(cortemp[length]);
-            setStartMarker(cortemp[0]);
+              setCoords(cortemp);
+              setMarkers(tempMARKERS);
+              setDestMarker(cortemp[length]);
+              setStartMarker(cortemp[0]);
     
             }
           }).catch(e => { console.warn(e) });
       }
 
-      const  forceUpdateMap = () => {
-        console.log("-----forceUpdateMap------")
-        setImageloaded(true);
-      }
-
       const fitAllMarkers = () => {
         const temMark = markers;
         console.log( "------fitAllMarkers------")
-        setLoading(false);
         if (mapRef.current == null) {
           console.log("map is null")
         } else {
@@ -97,6 +95,7 @@ const Mapa2 = () => {
 
 useEffect(() => {
     getRoutePoints(origin,destination);
+    speak(destinoStr);
 },[]);
 
   return (
@@ -110,6 +109,8 @@ useEffect(() => {
               style={styles.map}
               onLayout={() => fitAllMarkers()}
               loadingEnabled={true}
+              showsMyLocationButton={true}
+              showsUserLocation={true}
               
               >
 
