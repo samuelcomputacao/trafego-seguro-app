@@ -4,7 +4,9 @@ const css = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    justifyContent: "center"
+    justifyContent: "center",
+    width:'100%',
+    alignItems:'center'
   },
 
   map: {

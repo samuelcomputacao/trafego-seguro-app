@@ -10,6 +10,7 @@
   "dependencies": {
     "@react-navigation/native": "^6.0.6",
     "@react-navigation/native-stack": "^6.2.5",
+    "axios": "^0.24.0",
     "dotenv": "^10.0.0",
     "expo": "^43.0.0",
     "expo-location": "~13.0.4",
@@ -26,9 +27,11 @@
     "react-native-google-places-autocomplete": "^2.2.0",
     "react-native-maps": "0.27.0",
     "react-native-maps-directions": "^1.8.0",
+    "react-native-progress": "^5.0.0",
     "react-native-reanimated": "~2.2.0",
     "react-native-safe-area-context": "3.3.2",
     "react-native-screens": "~3.8.0",
+    "react-native-svg": "^12.1.1",
     "react-native-web": "0.17.1",
     "ws": "^8.2.3"
   },
