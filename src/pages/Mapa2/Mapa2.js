@@ -1,150 +1,103 @@
-import React, {useEffect, useRef, useState } from 'react';
-import {
-  StyleSheet,
-  View,Dimensions
-} from 'react-native';
-import MapView from 'react-native-maps';
-import * as Speech from "expo-speech"; 
+import React, { useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import MapView from "react-native-maps";
+import * as Speech from "expo-speech";
 
-import config from '../../../config/index.json';
+import {api} from "../../api";
 
-const mode = 'driving'; // 'walking';
-const ASPECT_RATIO = width / height;
-const LATITUDE_DELTA = 0.0922;
-const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
-const SPACE = 0.01;
 const DEFAULT_PADDING = { top: 100, right: 100, bottom: 100, left: 100 };
-const { width, height } = Dimensions.get('window');
-const polylineDecorder = require('polyline');
-
 
 const Mapa2 = ({ route, navigation }) => {
+  const mapRef = useRef(null);
 
-    const mapRef = useRef(null);
+  const [markers, setMarkers] = useState(null);
+  const [destMarker, setDestMarker] = useState(null);
+  const [startMarker, setStartMarker] = useState(null);
+  const [coords, setCoords] = useState([]);
 
-    const LAT_DELTA = 0.009;
-    const LNG_DELTA = 0.002;
-  
-    const [markers, setMarkers] = useState(null);
-    const [destMarker, setDestMarker] = useState(null);
-    const [startMarker, setStartMarker] = useState(null);
-    const [coords, setCoords] = useState(null);
+  const { origin, destination, destinoStr } = route.params;
 
-    const { origin, destination, destinoStr } = route.params;
+  const speak = (destinostr) => {
+    Speech.speak(destinoStr, { language: "pt-BR" });
+  };
 
-    const gerarLinha = (polyline) => {
-      debugger;
-      const coordenadas = polylineDecorder.decode(polyline);
-      let i = 0;
-      const pontos = Array();
-      while(i < coordenadas.length){
-        pontos.push({
-          latitude: coordenadas[i][0],
-          longitude:coordenadas[i][1]
+  const getRoutePoints = async (origin, destination) => {
+
+    try {
+      const response = await api.get(`/routes?origin=${origin}&destination=${destination}`);
+      const cortemp = response.data;
+
+      if (cortemp) {
+        var length = cortemp.length - 1;
+
+        var tempMARKERS = [];
+        tempMARKERS.push(cortemp[0]);
+        tempMARKERS.push(cortemp[length]);
+        setMarkers(tempMARKERS);
+        setDestMarker(cortemp[length]);
+        setStartMarker(cortemp[0]);
+
+        var coordsAux = cortemp.map((c) => {
+          return c;
         });
-        i += 1;
+        coordsAux.reverse();
+        setCoords(cortemp.concat(coordsAux));
       }
-      return pontos;
+    } catch (err) {
+      console.error(err);
     }
+  };
 
-    const speak = (destinostr) => {
-      Speech.speak(destinoStr,{language: 'pt-BR'})
+  const fitAllMarkers = () => {
+    const temMark = markers;
+    if (mapRef.current == null) {
+    } else {
+      mapRef.current.fitToCoordinates(temMark, {
+        edgePadding: DEFAULT_PADDING,
+        animated: false,
+      });
     }
+  };
 
-    const getRoutePoints = (origin,destination) => {
-        console.log("-----getRoutePoints-----")    
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${config.googleAPI}&mode=${mode}`;
-    
-        fetch(url)
-          .then(response => response.json())
-          .then(responseJson => {
-            if (responseJson.routes.length) {
-              
-              var cortemp = gerarLinha(responseJson.routes[0].overview_polyline.points); // definition below;
-              var length = cortemp.length - 1;
-    
-              var tempMARKERS = []; 
-              tempMARKERS.push(cortemp[0]) ;   //start origin        
-              tempMARKERS.push(cortemp[length]); //only destination adding
-    
-              //temMark : [{"latitude":[22.9962,72.59957],"longitude":[22.99633,72.59959]},{"latitude":[23.0138,72.56277],"longitude":[23.01369,72.56232]}]
-              console.log("tempMARKERS : " + JSON.stringify(tempMARKERS));
-    
-              setCoords(cortemp);
-              setMarkers(tempMARKERS);
-              setDestMarker(cortemp[length]);
-              setStartMarker(cortemp[0]);
-    
-            }
-          }).catch(e => { console.warn(e) });
-      }
-
-      const fitAllMarkers = () => {
-        const temMark = markers;
-        console.log( "------fitAllMarkers------")
-        if (mapRef.current == null) {
-          console.log("map is null")
-        } else {
-          console.log("temMark : " + JSON.stringify(temMark));
-          mapRef.current.fitToCoordinates(temMark, {
-            edgePadding: DEFAULT_PADDING,
-            animated: false,
-          });              
-        }
-      }
-
-useEffect(() => {
-    getRoutePoints(origin,destination);
+  useEffect(() => {
+    getRoutePoints(origin, destination);
     speak(destinoStr);
-},[]);
+  }, []);
 
   return (
-    
-      <View style={styles.container}>
-        {
-          (coords !== null && startMarker !== null && destMarker !== null) ?
-          
-            <MapView
-              ref={mapRef}
-              style={styles.map}
-              onLayout={() => fitAllMarkers()}
-              loadingEnabled={true}
-              showsMyLocationButton={true}
-              showsUserLocation={true}
-              
-              >
+    <View style={styles.container}>
+      {coords.length > 0 && startMarker !== null && destMarker !== null ? (
+        <MapView
+          ref={mapRef}
+          style={styles.map}
+          onLayout={() => fitAllMarkers()}
+          loadingEnabled={true}
+          showsMyLocationButton={true}
+          showsUserLocation={true}
+        >
+          <MapView.Polygon
+            coordinates={coords}
+            strokeWidth={4}
+            strokeColor='#000'
+            lineCap="round"
 
-              < MapView.Polyline
-                coordinates={coords}
-                strokeWidth={5}
-                lineDashPattern={[0]}
-              />
-
-              <MapView.Marker
-                key={1}
-                coordinate={startMarker}
-               
-              />
-
-              {/*end point marker*/}
-              <MapView.Marker
-                key={2}
-                coordinate={destMarker}
-              >                
-              </MapView.Marker>
-            </MapView> : null
-        }
-      </View>
-    );
-}
+          />
+          <MapView.Marker key={1} coordinate={startMarker} />
+          {/*end point marker*/}
+          <MapView.Marker key={2} coordinate={destMarker}></MapView.Marker>
+        </MapView>
+      ) : null}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5FCFF",
   },
   map: {
     ...StyleSheet.absoluteFillObject,

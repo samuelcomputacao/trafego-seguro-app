@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Progress from "react-native-progress";
@@ -53,7 +53,6 @@ const Home = ({ navigation }) => {
     if (granted) {
       let { coords } = await Location.getCurrentPositionAsync({});
       setOrigin(`${coords.latitude},${coords.longitude}`);
-      console.log(`Location: ${JSON.stringify(origin)}`);
     } else {
       throw new Error("Location permission not granted");
     }
@@ -79,30 +78,35 @@ const Home = ({ navigation }) => {
   };
 
   const listCitiesItems = () => {
-    var result  = (<View/>);
-    if(!searching && cities.length == 0 && !finish){
-      result =  (
-      <View style={[styles.row, styles.viewList]} key="key-empty">
-        <Text>Nenhuma cidade encontrada.</Text>
-      </View>);
+    var result = <View />;
+    if (!searching && cities.length == 0 && !finish) {
+      result = (
+        <View style={[styles.row, styles.viewList]} key="key-empty">
+          <Text style={styles.textList}>Nenhuma cidade encontrada.</Text>
+        </View>
+      );
     } else {
       if (!searching && cities.length > 0) {
-        result = (cities.map((citie) => {
-          return (<View
-            style={[styles.row, styles.viewList]}
-            key={citie.cod}
-            onTouchStart={() => {
-              handleUpdateCitie(citie);
-            }}
-          >
-            <Text>{`${citie.name} - ${citie.uf}`}</Text>
-          </View>)
-        }));
+        result = (
+          <ScrollView>
+            {cities.map((citie) => {
+              return (
+                <View style={[styles.row, styles.viewList]} key={citie.cod}>
+                  <Text
+                    style={styles.textList}
+                    onPress={() => {
+                      handleUpdateCitie(citie);
+                    }}
+                  >{`${citie.name} - ${citie.uf}`}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        );
       }
     }
     return result;
-  }
-
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 10 }}>
@@ -111,8 +115,10 @@ const Home = ({ navigation }) => {
         <Input
           style={styles.input}
           value={query}
-          onEndEditing={(e) => captureData()}
           onChangeText={(text) => handleUpdateQuery(text)}
+          onKeyPress={(e) => {
+            captureData();
+          }}
         />
       </View>
 
@@ -124,8 +130,7 @@ const Home = ({ navigation }) => {
           style={styles.button}
           title="OK"
           onPress={() => {
-            console.log("opa");
-            navigation.navigate("Mapa2", { origin, destination, destinoStr })
+            navigation.navigate("Mapa2", { origin, destination, destinoStr });
           }}
         >
           <Text style={[styles.buttonLabel]}>Continuar</Text>
@@ -175,10 +180,14 @@ const styles = StyleSheet.create({
 
   viewList: {
     backgroundColor: "white",
-    padding: 8,
     marginLeft: "2%",
     marginRight: "2%",
     marginBottom: 2,
+  },
+
+  textList: {
+    padding: 8,
+    width:'100%'
   },
 
   label: {
