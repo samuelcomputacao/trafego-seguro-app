@@ -13,8 +13,6 @@ const Home = ({ navigation }) => {
   const [destination, setDestination] = useState("23.0134,72.5624");
   const [searching, setSearching] = useState(false);
 
-  const [destinoStr, setDestinoStr] = useState("");
-
   const seachEl = useRef(null);
 
   const [query, setQuery] = useState("");
@@ -29,9 +27,6 @@ const Home = ({ navigation }) => {
   const handleUpdateCitie = (citie) => {
     setQuery(`${citie.name} - ${citie.uf}`);
     setDestination(`${citie.point.latitude},${citie.point.longitude}`);
-    setDestinoStr(
-      `Trajeto definido de local atual para ${citie.name},${citie.uf}`
-    );
     setCities([]);
     setFinish(true);
   };
@@ -130,7 +125,7 @@ const Home = ({ navigation }) => {
           style={styles.button}
           title="OK"
           onPress={() => {
-            navigation.navigate("Mapa2", { origin, destination, destinoStr });
+            navigation.navigate("Mapa2", { origin, destination });
           }}
         >
           <Text style={[styles.buttonLabel]}>Continuar</Text>

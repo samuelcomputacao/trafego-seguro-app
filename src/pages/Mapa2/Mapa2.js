@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView from "react-native-maps";
-import * as Speech from "expo-speech";
 
-import {api} from "../../api";
+import { api } from "../../api";
+import { speak } from "../../speak/speak";
 
 const DEFAULT_PADDING = { top: 100, right: 100, bottom: 100, left: 100 };
 
@@ -14,18 +14,46 @@ const Mapa2 = ({ route, navigation }) => {
   const [destMarker, setDestMarker] = useState(null);
   const [startMarker, setStartMarker] = useState(null);
   const [coords, setCoords] = useState([]);
+  const [poi, setPoi] = useState([]);
 
-  const { origin, destination, destinoStr } = route.params;
+  const { origin, destination } = route.params;
 
-  const speak = (destinostr) => {
-    Speech.speak(destinoStr, { language: "pt-BR" });
+  const speakAlertInit = (length, onDone) => {
+    let text = "Não foram encontrados alertas em seu trajeto até o momento.";
+    if (length > 0) {
+      const plural = length > 1;
+      text = `Fo${plural ? "ram" : "i"} encontrado${plural ? "s" : ""} ${
+        length
+      } alerta${plural ? "s" : ""} em seu trajeto.`;
+    }
+    speak(text, onDone);
   };
 
-  const getRoutePoints = async (origin, destination) => {
+  const convertLineToPoly = (cortemp) => {
+    var coordsAux = cortemp.map((c) => {
+      return c;
+    });
+    coordsAux.reverse();
+    return cortemp.concat(coordsAux);
+  };
 
+  const speakAlert = (alerts, idx) => {
+      if (idx < alerts.length){
+        speak(alerts[idx].texto, () => speakAlert(alerts, idx + 1));
+      }
+  }
+
+
+  const speakAlerts = (alerts) => {
+    speakAlert(alerts,0);
+  }
+
+  const getRoutePoints = async (origin, destination) => {
     try {
-      const response = await api.get(`/routes?origin=${origin}&destination=${destination}`);
-      const cortemp = response.data;
+      const response = await api.get(
+        `/routes?origin=${origin}&destination=${destination}`
+      );
+      const cortemp = response.data.route;
 
       if (cortemp) {
         var length = cortemp.length - 1;
@@ -36,12 +64,12 @@ const Mapa2 = ({ route, navigation }) => {
         setMarkers(tempMARKERS);
         setDestMarker(cortemp[length]);
         setStartMarker(cortemp[0]);
+        setCoords(convertLineToPoly(cortemp));
 
-        var coordsAux = cortemp.map((c) => {
-          return c;
-        });
-        coordsAux.reverse();
-        setCoords(cortemp.concat(coordsAux));
+        if (response.data.poi) {
+          setPoi(response.data.poi);
+          speakAlertInit(response.data.poi.length, ()=>{speakAlert(response.data.poi,0)});
+        }
       }
     } catch (err) {
       console.error(err);
@@ -61,7 +89,6 @@ const Mapa2 = ({ route, navigation }) => {
 
   useEffect(() => {
     getRoutePoints(origin, destination);
-    speak(destinoStr);
   }, []);
 
   return (
@@ -78,13 +105,14 @@ const Mapa2 = ({ route, navigation }) => {
           <MapView.Polygon
             coordinates={coords}
             strokeWidth={4}
-            strokeColor='#000'
+            strokeColor="#000"
             lineCap="round"
-
           />
-          <MapView.Marker key={1} coordinate={startMarker} />
-          {/*end point marker*/}
-          <MapView.Marker key={2} coordinate={destMarker}></MapView.Marker>
+          <MapView.Marker coordinate={startMarker} />
+          <MapView.Marker coordinate={destMarker} />
+          {poi.map((p, idx) => {
+            return <MapView.Marker key={idx} coordinate={p.point} />;
+          })}
         </MapView>
       ) : null}
     </View>
