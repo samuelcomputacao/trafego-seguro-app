@@ -19,6 +19,7 @@ const Home = ({ navigation }) => {
   const [cities, setCities] = useState([]);
   const [finish, setFinish] = useState(false);
 
+
   const handleUpdateQuery = async (query) => {
     setQuery(query);
     setFinish(false);
@@ -125,7 +126,7 @@ const Home = ({ navigation }) => {
           style={styles.button}
           title="OK"
           onPress={() => {
-            navigation.navigate("Mapa2", { origin, destination });
+            navigation.navigate("Mapa", { origin, destination });
           }}
         >
           <Text style={[styles.buttonLabel]}>Continuar</Text>
