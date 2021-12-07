@@ -3,9 +3,12 @@ import { StyleSheet, View } from "react-native";
 import MapView from "react-native-maps";
 import * as Location from "expo-location";
 
+import Polyline from "../componentes/polyline/Polyline";
+
 import { api } from "../../api";
 import { speak } from "../../speak/speak";
-import {openConnectionWS, closeConnectionWS} from '../../websocket/ws';
+
+import { openConnectionWS } from "../../websocket/ws";
 
 const DEFAULT_PADDING = { top: 100, right: 100, bottom: 100, left: 100 };
 
@@ -24,41 +27,26 @@ const Mapa = ({ route }) => {
     let text = "Não foram encontrados alertas em seu trajeto até o momento.";
     if (length > 0) {
       const plural = length > 1;
-      text = `Fo${plural ? "ram" : "i"} encontrado${plural ? "s" : ""} ${
-        length
-      } alerta${plural ? "s" : ""} em seu trajeto.`;
+      text = `Fo${plural ? "ram" : "i"} encontrado${
+        plural ? "s" : ""
+      } ${length} alerta${plural ? "s" : ""} em seu trajeto.`;
     }
     speak(text, onDone);
   };
 
   const captureLocation = async () => {
-    const msg = {type:"POSITION", value: undefined};
     const { granted } = await Location.requestForegroundPermissionsAsync();
     if (granted) {
       let { coords } = await Location.getCurrentPositionAsync({});
-      msg.value = {latitude: coords.latitude, longitude: coords.longitude};
-    } 
-    return msg;
-  };
-
-  const convertLineToPoly = (cortemp) => {
-    var coordsAux = cortemp.map((c) => {
-      return c;
-    });
-    coordsAux.reverse();
-    return cortemp.concat(coordsAux);
+      return { latitude: coords.latitude, longitude: coords.longitude };
+    }
   };
 
   const speakAlert = (alerts, idx) => {
-      if (idx < alerts.length){
-        speak(alerts[idx].texto, () => speakAlert(alerts, idx + 1));
-      }
-  }
-
-
-  // const speakAlerts = (alerts) => {
-  //   speakAlert(alerts,0);
-  // }
+    if (idx < alerts.length) {
+      speak(alerts[idx].texto, () => speakAlert(alerts, idx + 1));
+    }
+  };
 
   const getRoutePoints = async (origin, destination) => {
     try {
@@ -76,12 +64,22 @@ const Mapa = ({ route }) => {
         setMarkers(tempMARKERS);
         setDestMarker(cortemp[length]);
         setStartMarker(cortemp[0]);
-        setCoords(convertLineToPoly(cortemp));
+        setCoords(cortemp);
 
         if (response.data.poi) {
           setPoi(response.data.poi);
-          speakAlertInit(response.data.poi.length, ()=>{speakAlert(response.data.poi,0)});
+          speakAlertInit(response.data.poi.length, () => {
+            speakAlert(response.data.poi, 0);
+          });
         }
+
+        openConnectionWS(async () => {
+          const position = await captureLocation();
+          return {
+            type: "POSITION",
+            value: { position, route: cortemp },
+          };
+        });
       }
     } catch (err) {
       console.error(err);
@@ -101,11 +99,10 @@ const Mapa = ({ route }) => {
 
   useEffect(() => {
     getRoutePoints(origin, destination);
-    openConnectionWS(captureLocation);
   }, []);
 
   return (
-    <View style={styles.container} onTouchStart={closeConnectionWS}>
+    <View style={styles.container}>
       {coords.length > 0 && startMarker !== null && destMarker !== null ? (
         <MapView
           ref={mapRef}
@@ -115,16 +112,29 @@ const Mapa = ({ route }) => {
           showsMyLocationButton={true}
           showsUserLocation={true}
         >
-          <MapView.Polygon
-            coordinates={coords}
-            strokeWidth={4}
-            strokeColor="#000"
-            lineCap="round"
+          <Polyline route={coords} />
+
+          <MapView.Marker
+            coordinate={destMarker}
+            fillColor="#1626d9"
+            title="Origem"
           />
-          <MapView.Marker coordinate={destMarker} fillColor="#1626d9" title="Origem"/>
-          <MapView.Circle center={startMarker} radius={2000} fillColor="#1626d9"/>
+
+          <MapView.Circle
+            center={startMarker}
+            radius={2000}
+            fillColor="#1626d9"
+          />
+
           {poi.map((p, idx) => {
-            return <MapView.Circle key={idx} center={p.point} radius={2000} fillColor="#c42e00"/>;
+            return (
+              <MapView.Circle
+                key={idx}
+                center={p.point}
+                radius={2000}
+                fillColor="#c42e00"
+              />
+            );
           })}
         </MapView>
       ) : null}

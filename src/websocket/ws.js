@@ -2,32 +2,43 @@ import config from "../../config/config.json";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 
 const openConnectionWS = (callback) => {
-  const ws = new W3CWebSocket(config.websocketAPI);
+  let ws;
+  if (!global.ws) {
+    ws = new W3CWebSocket(config.websocketAPI);
 
-  ws.onopen = () => {
-    console.log("WebSocket Client Connected");
-    const msg = { type: "AUTHORIZATION", value: config.websocket.key };
-    ws.send(JSON.stringify(msg));
-    global.ok = true;
-  };
+    ws.onopen = () => {
+      console.log("WebSocket Client Connected");
+      const msg = { type: "AUTHORIZATION", value: config.websocket.key };
+      ws.send(JSON.stringify(msg));
+      global.ok = true;
+    };
+  }else{
+    ws = global.ws;
+  }
 
   ws.onclose = () => {
+    global.ws = undefined;
+    global.ok = undefined;
     console.log("WebSocket Client Closed!");
   };
 
-  ws.onmessage = ({ data }) => {
+  ws.onmessage = ({data}) => {
     if (data) {
       const msg = JSON.parse(data);
       console.log(msg);
     }
   };
 
-  setInterval(async () => {
-    if(global.ok){
+  if(global.timer){
+    clearInterval(global.timer);
+  }
+
+  global.timer = setInterval(async () => {
+    if (global.ok) {
       const msg = await callback();
       ws.send(JSON.stringify(msg));
     }
-  }, 2000);
+  }, 1000);
 
   global.ws = ws;
 };
@@ -38,7 +49,7 @@ const closeConnectionWS = () => {
     global.ws.send(JSON.stringify(msg));
     global.ws.close();
     global.ws = undefined;
-    global.ok = undefined
+    global.ok = undefined;
   }
 };
 

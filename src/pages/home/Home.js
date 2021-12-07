@@ -8,6 +8,7 @@ import { Input, Text } from "react-native-elements";
 import { TouchableOpacity } from "react-native";
 import { api } from "../../api";
 
+
 const Home = ({ navigation }) => {
   const [origin, setOrigin] = useState();
   const [destination, setDestination] = useState("23.0134,72.5624");
@@ -126,7 +127,7 @@ const Home = ({ navigation }) => {
           style={styles.button}
           title="OK"
           onPress={() => {
-            navigation.navigate("Mapa", { origin, destination });
+            navigation.navigate("Mapa", { origin, destination});
           }}
         >
           <Text style={[styles.buttonLabel]}>Continuar</Text>
