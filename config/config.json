@@ -1,6 +1,6 @@
 {
-  "hostAPI": "http://192.168.0.111:3000",
-  "websocketAPI": "ws://192.168.0.111:3000",
+  "hostAPI": "http://192.168.0.113:3000",
+  "websocketAPI": "ws://192.168.0.113:3000",
   "websocket": {
     "key": "samuelWS@$%IUL",
     "msg": "okay"
