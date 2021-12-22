@@ -1,7 +1,17 @@
 import config from "../../config/config.json";
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 
-const openConnectionWS = (callback) => {
+const dispatchMessage = (type, value, callback) => {
+  switch (type) {
+    case "POIS":
+      callback(value);
+      break;  
+    default:
+      break;
+  }
+}
+
+const openConnectionWS = (callback, processPois) => {
   let ws;
   if (!global.ws) {
     ws = new W3CWebSocket(config.websocketAPI);
@@ -25,7 +35,14 @@ const openConnectionWS = (callback) => {
   ws.onmessage = ({data}) => {
     if (data) {
       const msg = JSON.parse(data);
-      console.log(msg);
+      try {
+        const {type, value} = msg;
+        if(type && value){
+          dispatchMessage(type, value, processPois);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 

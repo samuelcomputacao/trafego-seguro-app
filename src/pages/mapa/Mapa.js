@@ -14,25 +14,17 @@ const DEFAULT_PADDING = { top: 100, right: 100, bottom: 100, left: 100 };
 
 const Mapa = ({ route }) => {
   const mapRef = useRef(null);
+  const poisRef = useRef();
 
   const [markers, setMarkers] = useState(null);
   const [destMarker, setDestMarker] = useState(null);
   const [startMarker, setStartMarker] = useState(null);
   const [coords, setCoords] = useState([]);
-  const [poi, setPoi] = useState([]);
+  const [poi, setPois] = useState([]);
+
+  poisRef.current = poi;
 
   const { origin, destination } = route.params;
-
-  const speakAlertInit = (length, onDone) => {
-    let text = "Não foram encontrados alertas em seu trajeto até o momento.";
-    if (length > 0) {
-      const plural = length > 1;
-      text = `Fo${plural ? "ram" : "i"} encontrado${
-        plural ? "s" : ""
-      } ${length} alerta${plural ? "s" : ""} em seu trajeto.`;
-    }
-    speak(text, onDone);
-  };
 
   const captureLocation = async () => {
     const { granted } = await Location.requestForegroundPermissionsAsync();
@@ -42,9 +34,29 @@ const Mapa = ({ route }) => {
     }
   };
 
-  const speakAlert = (alerts, idx) => {
-    if (idx < alerts.length) {
-      speak(alerts[idx].texto, () => speakAlert(alerts, idx + 1));
+  const speakAlert = async (alert) => {
+    await speak(alert);
+  };
+
+  const processPois = (data) => {
+    if (data && data.length > 0) {
+      data = data.filter(
+        (d) => !poisRef.current.map((p) => p.id).includes(d.id)
+      );
+      const length = data.length;
+      if (length > 0) {
+        const plural = length > 1;
+        const text = `Fo${plural ? "ram" : "i"} encontrado${
+          plural ? "s" : ""
+        } ${length} alerta${plural ? "s" : ""} em seu trajeto.`;
+
+        speakAlert(text);
+
+        data.forEach((p) => {
+          setPois([...poi, p]);
+          speakAlert(p.texto);
+        });
+      }
     }
   };
 
@@ -66,20 +78,15 @@ const Mapa = ({ route }) => {
         setStartMarker(cortemp[0]);
         setCoords(cortemp);
 
-        if (response.data.poi) {
-          setPoi(response.data.poi);
-          speakAlertInit(response.data.poi.length, () => {
-            speakAlert(response.data.poi, 0);
-          });
-        }
-
         openConnectionWS(async () => {
           const position = await captureLocation();
           return {
             type: "POSITION",
             value: { position, route: cortemp },
           };
-        });
+        }, processPois);
+
+        processPois(response);
       }
     } catch (err) {
       console.error(err);
