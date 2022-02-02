@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Image , Text} from "react-native";
 import MapView from "react-native-maps";
 import * as Location from "expo-location";
 
@@ -124,23 +124,32 @@ const Mapa = ({ route }) => {
           <MapView.Marker
             coordinate={destMarker}
             fillColor="#1626d9"
-            title="Origem"
+            title="Destino"
           />
 
           <MapView.Circle
             center={startMarker}
-            radius={2000}
             fillColor="#1626d9"
+            description="Origem"
+            radius={10}
           />
 
           {poi.map((p, idx) => {
             return (
-              <MapView.Circle
+              <MapView.Marker
                 key={idx}
-                center={p.point}
-                radius={2000}
-                fillColor="#c42e00"
-              />
+                coordinate={p.point}
+              >
+                <Image
+                  source={require("../../../resources/warning.png")}
+                  style={{ height: 35, width: 35, resizeMode: "contain" }}
+                />
+                <MapView.Callout>
+                  <View style={{width:100}}>
+                    <Text>{p.texto}</Text>
+                  </View>
+                </MapView.Callout>
+              </MapView.Marker>
             );
           })}
         </MapView>
